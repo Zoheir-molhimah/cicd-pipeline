@@ -175,7 +175,7 @@ jobs:
 
   # Staging Deployment (Auto-approved for staging/develop)
   deploy-staging:
-    needs: build-gate
+    needs: [code-quality-gate, security-gate, testing-gate, build-gate]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/develop'
     steps:
@@ -208,7 +208,7 @@ jobs:
 
   # Production Deployment (REQUIRES MANUAL APPROVAL)
   deploy-production:
-    needs: build-gate
+    needs: [code-quality-gate, security-gate, testing-gate, build-gate]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
