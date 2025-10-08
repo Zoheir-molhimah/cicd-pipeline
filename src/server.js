@@ -118,7 +118,7 @@ const authenticateToken = (req, res, next) => {
 // Routes
 app.get('/', (req, res) => {
   const indexPath = path.join(__dirname, '../dist/client/index.html');
-  
+
   // Check if the file exists, if not, serve a simple response
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
