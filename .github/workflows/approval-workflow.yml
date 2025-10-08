@@ -192,24 +192,14 @@ jobs:
           echo "✅ Post-deployment verification completed"
 
       - name: Notify Production Deployment
-        uses: 8398a7/action-slack@v3
-        if: always()
-        with:
-          status: ${{ job.status }}
-          channel: '#deployments'
-          text: |
-            🚀 Production Deployment ${{ job.status }}!
-            
-            **Details:**
-            - Environment: Production
-            - Deployed by: ${{ github.event.inputs.approver || github.actor }}
-            - Reason: ${{ github.event.inputs.reason || 'Production deployment' }}
-            - Commit: ${{ github.sha }}
-            - Image: ${{ steps.meta.outputs.tags }}
-            
-            **Status:** ${{ job.status }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "🚀 Production Deployment Notification"
+          echo "Status: ${{ job.status }}"
+          echo "Environment: Production"
+          echo "Deployed by: ${{ github.event.inputs.approver || github.actor }}"
+          echo "Reason: ${{ github.event.inputs.reason || 'Production deployment' }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "✅ Production deployment notification sent!"
 
   # Staging Deployment
   deploy-staging:
