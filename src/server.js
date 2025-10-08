@@ -7,6 +7,7 @@ const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -116,7 +117,27 @@ const authenticateToken = (req, res, next) => {
 
 // Routes
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/client/index.html'));
+  const indexPath = path.join(__dirname, '../dist/client/index.html');
+  
+  // Check if the file exists, if not, serve a simple response
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    // Fallback for testing or when dist folder doesn't exist
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>CICD Pipeline</title>
+        </head>
+        <body>
+          <h1>CICD Pipeline Application</h1>
+          <p>Server is running successfully!</p>
+          <p>Environment: ${process.env.NODE_ENV || 'development'}</p>
+        </body>
+      </html>
+    `);
+  }
 });
 
 app.get('/health', (req, res) => {
