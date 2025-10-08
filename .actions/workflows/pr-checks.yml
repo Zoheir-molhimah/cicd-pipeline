@@ -1,0 +1,414 @@
+name: Pull Request Checks - Protected Code Review
+
+on:
+  pull_request:
+    branches:
+      - main
+      - staging
+      - develop
+    types: [opened, synchronize, reopened, ready_for_review]
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # Code Quality Gate - Must Pass
+  code-quality-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      quality-passed: ${{ steps.quality-check.outputs.passed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+        continue-on-error: false
+
+      - name: Run Prettier check
+        run: npm run format:check
+        continue-on-error: false
+
+      - name: Type checking
+        run: npm run type-check
+        continue-on-error: false
+
+      - name: Quality Gate Check
+        id: quality-check
+        run: |
+          echo "✅ Code quality checks passed"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+      - name: Comment PR with Quality Results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Code Quality Gate')
+            );
+            
+            const body = `## 🔍 Code Quality Gate - ✅ PASSED
+            
+            **Status**: All code quality checks passed successfully
+            
+            **Checks Completed**:
+            - ✅ ESLint validation
+            - ✅ Prettier formatting
+            - ✅ TypeScript type checking
+            
+            **Quality Score**: 🟢 Excellent
+            
+            ---
+            *This check is required for merge approval*`;
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+  # Security Gate - Must Pass
+  security-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      security-passed: ${{ steps.security-check.outputs.passed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: npm audit --audit-level moderate
+        continue-on-error: false
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        continue-on-error: false
+
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: Security Gate Check
+        id: security-check
+        run: |
+          echo "✅ Security checks passed"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+      - name: Comment PR with Security Results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Security Gate')
+            );
+            
+            const body = `## 🔒 Security Gate - ✅ PASSED
+            
+            **Status**: All security checks passed successfully
+            
+            **Security Checks Completed**:
+            - ✅ Dependency vulnerability scan
+            - ✅ CodeQL static analysis
+            - ✅ Secret detection scan
+            
+            **Security Score**: 🟢 Secure
+            
+            ---
+            *This check is required for merge approval*`;
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+  # Testing Gate - Must Pass
+  testing-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      tests-passed: ${{ steps.test-check.outputs.passed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        continue-on-error: false
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Test Gate Check
+        id: test-check
+        run: |
+          echo "✅ All tests passed"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+      - name: Comment PR with Test Results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Testing Gate')
+            );
+            
+            const body = `## 🧪 Testing Gate - ✅ PASSED
+            
+            **Status**: All tests passed successfully
+            
+            **Test Results**:
+            - ✅ Unit tests passed
+            - ✅ Integration tests passed
+            - ✅ Coverage requirements met
+            
+            **Test Score**: 🟢 Excellent
+            
+            ---
+            *This check is required for merge approval*`;
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+  # Build Gate - Must Pass
+  build-gate:
+    runs-on: ubuntu-latest
+    needs: [code-quality-gate, security-gate, testing-gate]
+    outputs:
+      build-passed: ${{ steps.build-check.outputs.passed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        continue-on-error: false
+
+      - name: Build Gate Check
+        id: build-check
+        run: |
+          echo "✅ Build completed successfully"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+      - name: Comment PR with Build Results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Build Gate')
+            );
+            
+            const body = `## 🔨 Build Gate - ✅ PASSED
+            
+            **Status**: Application built successfully
+            
+            **Build Results**:
+            - ✅ Client build completed
+            - ✅ Server build completed
+            - ✅ All dependencies resolved
+            
+            **Build Score**: 🟢 Ready for deployment
+            
+            ---
+            *This check is required for merge approval*`;
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+  # Code Review Summary
+  pr-summary:
+    needs: [code-quality-gate, security-gate, testing-gate, build-gate]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: PR Review Summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const qualityPassed = '${{ needs.code-quality-gate.outputs.quality-passed }}' === 'true';
+            const securityPassed = '${{ needs.security-gate.outputs.security-passed }}' === 'true';
+            const testsPassed = '${{ needs.testing-gate.outputs.tests-passed }}' === 'true';
+            const buildPassed = '${{ needs.build-gate.outputs.build-passed }}' === 'true';
+            
+            const allPassed = qualityPassed && securityPassed && testsPassed && buildPassed;
+            
+            const statusEmoji = allPassed ? '✅' : '❌';
+            const statusText = allPassed ? 'READY FOR REVIEW' : 'NEEDS ATTENTION';
+            const statusColor = allPassed ? '🟢' : '🔴';
+            
+            const body = `## 📋 Pull Request Review Summary ${statusEmoji}
+            
+            **Overall Status**: ${statusColor} ${statusText}
+            
+            ### Gate Status:
+            - **Code Quality**: ${qualityPassed ? '✅ PASSED' : '❌ FAILED'}
+            - **Security**: ${securityPassed ? '✅ PASSED' : '❌ FAILED'}
+            - **Testing**: ${testsPassed ? '✅ PASSED' : '❌ FAILED'}
+            - **Build**: ${buildPassed ? '✅ PASSED' : '❌ FAILED'}
+            
+            ### Next Steps:
+            ${allPassed ? 
+              '🎉 **All checks passed!** This PR is ready for code review and approval.' : 
+              '⚠️ **Some checks failed.** Please address the issues above before requesting review.'
+            }
+            
+            ### Approval Requirements:
+            - **main branch**: Requires 2 approvals + code owner review
+            - **staging branch**: Requires 1 approval + code owner review  
+            - **develop branch**: Requires 1 approval
+            
+            ---
+            *Automated by CICD Pipeline Protection System*`;
+            
+            // Find existing summary comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const summaryComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Pull Request Review Summary')
+            );
+            
+            if (summaryComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: summaryComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }

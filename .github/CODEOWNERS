@@ -1,0 +1,119 @@
+# ===============================================
+# CICD Pipeline - Code Ownership & Approval Rules
+# ===============================================
+
+# Global code owners - ALL changes require approval
+* @Zoheir-molhimah @Naif-Molhimah @tec
+
+# ===============================================
+# CRITICAL FILES - Require MULTIPLE approvals
+# ===============================================
+
+# Package management - require 2 approvals
+package.json @Zoheir-molhimah @Naif-Molhimah @tec
+package-lock.json @Zoheir-molhimah @Naif-Molhimah @tec
+yarn.lock @Zoheir-molhimah @Naif-Molhimah @tec
+
+# Infrastructure & Deployment - require DevOps approval
+Dockerfile @Zoheir-molhimah @tec
+docker-compose.yml @Zoheir-molhimah @tec
+/.actions/workflows/ @Zoheir-molhimah @tec
+
+# Security Configuration - require security team approval
+/.github/CODEOWNERS @Zoheir-molhimah @tec
+/.github/BRANCH_PROTECTION_SETUP.md @Zoheir-molhimah @tec
+.env.example @Zoheir-molhimah @tec
+
+# ===============================================
+# CI/CD & AUTOMATION - Require DevOps approval
+# ===============================================
+
+# GitHub Actions workflows
+/.actions/workflows/main.yml @Zoheir-molhimah @tec
+/.actions/workflows/pr-checks.yml @Zoheir-molhimah @tec
+/.actions/workflows/approval-workflow.yml @Zoheir-molhimah @tec
+
+# GitHub configuration
+/.github/ @Zoheir-molhimah @tec
+
+# ===============================================
+# CODE QUALITY & TESTING - Require team approval
+# ===============================================
+
+# Testing configuration
+jest.config.js @Zoheir-molhimah @Naif-Molhimah @tec
+/tests/ @Zoheir-molhimah @Naif-Molhimah @tec
+/__tests__/ @Zoheir-molhimah @Naif-Molhimah @tec
+*.test.js @Zoheir-molhimah @Naif-Molhimah @tec
+*.test.ts @Zoheir-molhimah @Naif-Molhimah @tec
+*.spec.js @Zoheir-molhimah @Naif-Molhimah @tec
+*.spec.ts @Zoheir-molhimah @Naif-Molhimah @tec
+
+# Code quality tools
+.eslintrc.js @Zoheir-molhimah @Naif-Molhimah
+.prettierrc @Zoheir-molhimah @Naif-Molhimah
+webpack.config.js @Zoheir-molhimah @Naif-Molhimah
+
+# ===============================================
+# SOURCE CODE - Require team approval
+# ===============================================
+
+# Server-side code - require senior dev approval
+/src/server.js @Zoheir-molhimah @Naif-Molhimah @tec
+/src/index.js @Zoheir-molhimah @Naif-Molhimah @tec
+
+# Client-side code - require frontend team approval
+/src/client/ @Zoheir-molhimah @Naif-Molhimah
+/public/ @Zoheir-molhimah @Naif-Molhimah
+/components/ @Zoheir-molhimah @Naif-Molhimah
+/pages/ @Zoheir-molhimah @Naif-Molhimah
+/styles/ @Zoheir-molhimah @Naif-Molhimah
+
+# Backend code - require backend team approval
+/api/ @Naif-Molhimah @tec
+/server/ @Naif-Molhimah @tec
+/routes/ @Naif-Molhimah @tec
+/middleware/ @Naif-Molhimah @tec
+/models/ @Naif-Molhimah @tec
+
+# Database and migrations
+/migrations/ @Naif-Molhimah @tec
+/schema/ @Naif-Molhimah @tec
+
+# ===============================================
+# DOCUMENTATION - Require tech lead approval
+# ===============================================
+
+# Project documentation
+README.md @Zoheir-molhimah @Naif-Molhimah @tec
+GITHUB_SETUP_GUIDE.md @Zoheir-molhimah @tec
+TESTING_GUIDE.md @Zoheir-molhimah @tec
+/docs/ @Zoheir-molhimah @Naif-Molhimah @tec
+
+# ===============================================
+# ENVIRONMENT-SPECIFIC RULES
+# ===============================================
+
+# Production deployment files
+/k8s/production/ @Zoheir-molhimah @tec
+/deploy/production/ @Zoheir-molhimah @tec
+
+# Staging deployment files
+/k8s/staging/ @Zoheir-molhimah @Naif-Molhimah @tec
+/deploy/staging/ @Zoheir-molhimah @Naif-Molhimah @tec
+
+# ===============================================
+# SECURITY-SENSITIVE FILES
+# ===============================================
+
+# Any file containing secrets or sensitive data
+**/secrets/** @Zoheir-molhimah @tec
+**/.env* @Zoheir-molhimah @tec
+**/config/production/** @Zoheir-molhimah @tec
+
+# ===============================================
+# EMERGENCY OVERRIDE (for critical fixes)
+# ===============================================
+
+# Emergency hotfixes (require immediate approval)
+/hotfix/ @Zoheir-molhimah @tec

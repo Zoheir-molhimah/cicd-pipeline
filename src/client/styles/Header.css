@@ -1,0 +1,153 @@
+/* Header.css - Navigation Styles */
+.header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 70px;
+}
+
+.logo h1 {
+  font-size: 24px;
+  color: #667eea;
+  margin: 0;
+  font-weight: 700;
+}
+
+.logo .subtitle {
+  font-size: 12px;
+  color: #666;
+  font-weight: 400;
+}
+
+.navigation {
+  display: flex;
+  gap: 10px;
+}
+
+.nav-btn {
+  background: transparent;
+  color: #666;
+  border: 2px solid transparent;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.nav-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  border-color: rgba(102, 126, 234, 0.2);
+}
+
+.nav-btn.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.logout-btn {
+  background: #ff4757;
+  color: white;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.logout-btn:hover {
+  background: #ff3742;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.login-btn {
+  background: #667eea;
+  color: white;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.register-btn {
+  background: transparent;
+  color: #667eea;
+  border: 2px solid #667eea;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.register-btn:hover {
+  background: #667eea;
+  color: white;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .header-content {
+    padding: 0 15px;
+    height: 60px;
+  }
+  
+  .logo h1 {
+    font-size: 20px;
+  }
+  
+  .logo .subtitle {
+    display: none;
+  }
+  
+  .navigation {
+    gap: 5px;
+  }
+  
+  .nav-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .user-section {
+    gap: 10px;
+  }
+  
+  .auth-buttons {
+    gap: 5px;
+  }
+  
+  .login-btn,
+  .register-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
