@@ -185,7 +185,6 @@ jobs:
       - name: Deploy to Staging
         run: |
           echo "🚀 Deploying to Staging Environment"
-          echo "Image: ${{ needs.build-gate.outputs.image-tag }}"
           echo "Deployed by: ${{ github.actor }}"
           echo "Commit: ${{ github.sha }}"
           echo "Message: ${{ github.event.head_commit.message }}"
@@ -199,18 +198,13 @@ jobs:
           # Add staging-specific tests here
 
       - name: Notify Staging Deployment
-        uses: 8398a7/action-slack@v3
-        if: always()
-        with:
-          status: ${{ job.status }}
-          channel: '#deployments'
-          text: |
-            Staging Deployment ${{ job.status }}!
-            Author: ${{ github.actor }}
-            Commit: ${{ github.sha }}
-            Message: ${{ github.event.head_commit.message }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "📢 Staging Deployment Notification"
+          echo "Status: ${{ job.status }}"
+          echo "Author: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Message: ${{ github.event.head_commit.message }}"
+          echo "✅ Staging deployment completed successfully!"
 
   # Production Deployment (REQUIRES MANUAL APPROVAL)
   deploy-production:
@@ -238,7 +232,6 @@ jobs:
       - name: Deploy to Production
         run: |
           echo "🚀 Deploying to Production Environment"
-          echo "Image: ${{ needs.build-gate.outputs.image-tag }}"
           echo "Deployed by: ${{ github.actor }}"
           echo "Commit: ${{ github.sha }}"
           echo "Message: ${{ github.event.head_commit.message }}"
@@ -253,15 +246,10 @@ jobs:
           # Example: curl -f https://your-app.com/health
 
       - name: Notify Production Deployment
-        uses: 8398a7/action-slack@v3
-        if: always()
-        with:
-          status: ${{ job.status }}
-          channel: '#deployments'
-          text: |
-            Production Deployment ${{ job.status }}!
-            Author: ${{ github.actor }}
-            Commit: ${{ github.sha }}
-            Message: ${{ github.event.head_commit.message }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "📢 Production Deployment Notification"
+          echo "Status: ${{ job.status }}"
+          echo "Author: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Message: ${{ github.event.head_commit.message }}"
+          echo "✅ Production deployment completed successfully!"
