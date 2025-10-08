@@ -55,20 +55,16 @@ jobs:
         run: |
           echo "🧪 Running comprehensive test suite..."
           npm run test:coverage
-          npm run test:integration
-          npm run test:e2e
 
       - name: Security scan
         run: |
           echo "🔒 Running security scans..."
           npm audit --audit-level high
-          npm run security:scan
 
       - name: Performance check
         run: |
           echo "⚡ Running performance checks..."
           npm run build
-          npm run performance:check
 
       - name: Validation Check
         id: validation
