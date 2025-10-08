@@ -125,7 +125,7 @@ app.get('/', (req, res) => {
   } else {
     // Fallback for testing or when dist folder doesn't exist
     res.status(200).send(`
-      <!DOCTYPE html>
+      <!doctype html>
       <html>
         <head>
           <title>CICD Pipeline</title>
