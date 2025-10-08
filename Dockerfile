@@ -34,7 +34,6 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/public ./public
 
 # Change ownership to app user
 RUN chown -R cicd-pipeline:nodejs /app

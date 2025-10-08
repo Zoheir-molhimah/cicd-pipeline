@@ -252,23 +252,13 @@ jobs:
           echo "✅ Staging tests completed"
 
       - name: Notify Staging Deployment
-        uses: 8398a7/action-slack@v3
-        if: always()
-        with:
-          status: ${{ job.status }}
-          channel: '#deployments'
-          text: |
-            🚀 Staging Deployment ${{ job.status }}!
-            
-            **Details:**
-            - Environment: Staging
-            - Deployed by: ${{ github.event.inputs.approver || github.actor }}
-            - Reason: ${{ github.event.inputs.reason || 'Staging deployment' }}
-            - Commit: ${{ github.sha }}
-            
-            **Status:** ${{ job.status }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "📢 Staging Deployment Notification"
+          echo "Status: ${{ job.status }}"
+          echo "Author: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Message: ${{ github.event.head_commit.message }}"
+          echo "✅ Staging deployment completed successfully!"
 
   # Deployment Summary
   deployment-summary:
