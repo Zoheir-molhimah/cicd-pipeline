@@ -16,12 +16,12 @@ function RealTimeChat({ user }) {
 
     newSocket.on('connect', () => {
       setIsConnected(true);
-      console.log('Connected to chat server');
+      // Connected to chat server
     });
 
     newSocket.on('disconnect', () => {
       setIsConnected(false);
-      console.log('Disconnected from chat server');
+      // Disconnected from chat server
     });
 
     newSocket.on('message', message => {

@@ -11,7 +11,7 @@ module.exports = {
   rules: {
     'prettier/prettier': 'error',
     'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-    'no-console': 'warn',
+    'no-console': ['warn', { allow: ['error', 'warn'] }],
     'no-debugger': 'error',
     'prefer-const': 'error',
     'no-var': 'error',

@@ -61,7 +61,7 @@ app.use(express.static(path.join(__dirname, '../dist/client')));
 
 // Socket.IO connection handling
 io.on('connection', socket => {
-  console.log('User connected:', socket.id);
+  // User connected: socket.id
 
   // Send chat history to new user
   db.all(
@@ -90,7 +90,7 @@ io.on('connection', socket => {
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    // User disconnected: socket.id
   });
 });
 
@@ -334,10 +334,7 @@ app.use('*', (req, res) => {
 // Only start server if this file is run directly
 if (require.main === module) {
   server.listen(PORT, () => {
-    console.log(`🚀 CICD Pipeline running on port ${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-    console.log(`💬 WebSocket server ready for real-time chat`);
+    // Server started successfully
   });
 }
 

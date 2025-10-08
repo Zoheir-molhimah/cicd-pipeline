@@ -17,8 +17,16 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "type-check": "tsc --noEmit",
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
     "audit": "npm audit",
-    "audit:fix": "npm audit fix"
+    "audit:fix": "npm audit fix",
+    "test:integration": "echo 'Integration tests not implemented yet'",
+    "test:e2e": "echo 'E2E tests not implemented yet'",
+    "test:staging": "echo 'Staging tests not implemented yet'",
+    "test:smoke": "echo 'Smoke tests not implemented yet'",
+    "performance:check": "echo 'Performance checks not implemented yet'",
+    "security:scan": "npm audit --audit-level high"
   },
   "keywords": [
     "cicd",
