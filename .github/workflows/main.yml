@@ -1,0 +1,269 @@
+name: CI/CD Pipeline - Protected Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - develop
+  pull_request:
+    branches:
+      - main
+      - staging
+    types: [opened, synchronize, reopened, ready_for_review]
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Code Quality & Security Gates
+  code-quality-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      quality-passed: ${{ steps.quality-check.outputs.passed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+        continue-on-error: false
+
+      - name: Run type checking
+        run: npm run type-check
+        continue-on-error: false
+
+      - name: Quality Gate Check
+        id: quality-check
+        run: |
+          echo "✅ Code quality checks passed"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+  # Security Scanning Gate
+  security-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      security-passed: ${{ steps.security-check.outputs.passed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: npm audit --audit-level moderate
+        continue-on-error: false
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        continue-on-error: false
+
+      - name: Security Gate Check
+        id: security-check
+        run: |
+          echo "✅ Security checks passed"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+  # Testing Gate
+  testing-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      tests-passed: ${{ steps.test-check.outputs.passed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        continue-on-error: false
+
+      - name: Test Gate Check
+        id: test-check
+        run: |
+          echo "✅ All tests passed"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+  # Build Gate
+  build-gate:
+    runs-on: ubuntu-latest
+    needs: [code-quality-gate, security-gate, testing-gate]
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        continue-on-error: false
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Staging Deployment (Auto-approved for staging/develop)
+  deploy-staging:
+    needs: build-gate
+    runs-on: ubuntu-latest
+    environment: staging
+    if: github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/develop'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Staging
+        run: |
+          echo "🚀 Deploying to Staging Environment"
+          echo "Image: ${{ needs.build-gate.outputs.image-tag }}"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Message: ${{ github.event.head_commit.message }}"
+          
+          # Add your staging deployment commands here
+          # Example: kubectl apply -f k8s/staging/
+
+      - name: Run Staging Tests
+        run: |
+          echo "🧪 Running staging environment tests"
+          # Add staging-specific tests here
+
+      - name: Notify Staging Deployment
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          text: |
+            Staging Deployment ${{ job.status }}!
+            Author: ${{ github.actor }}
+            Commit: ${{ github.sha }}
+            Message: ${{ github.event.head_commit.message }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Production Deployment (REQUIRES MANUAL APPROVAL)
+  deploy-production:
+    needs: build-gate
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Pre-deployment Security Scan
+        run: |
+          echo "🔍 Running additional production security checks"
+          # Add production-specific security scans
+          npm audit --audit-level high
+
+      - name: Production Readiness Check
+        run: |
+          echo "✅ Production readiness verified"
+          echo "All gates passed:"
+          echo "- Code Quality: ${{ needs.code-quality-gate.outputs.quality-passed }}"
+          echo "- Security: ${{ needs.security-gate.outputs.security-passed }}"
+          echo "- Tests: ${{ needs.testing-gate.outputs.tests-passed }}"
+
+      - name: Deploy to Production
+        run: |
+          echo "🚀 Deploying to Production Environment"
+          echo "Image: ${{ needs.build-gate.outputs.image-tag }}"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Message: ${{ github.event.head_commit.message }}"
+          
+          # Add your production deployment commands here
+          # Example: kubectl apply -f k8s/production/
+
+      - name: Post-deployment Verification
+        run: |
+          echo "✅ Running post-deployment verification"
+          # Add health checks and smoke tests
+          # Example: curl -f https://your-app.com/health
+
+      - name: Notify Production Deployment
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          text: |
+            Production Deployment ${{ job.status }}!
+            Author: ${{ github.actor }}
+            Commit: ${{ github.sha }}
+            Message: ${{ github.event.head_commit.message }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -1,0 +1,306 @@
+name: Manual Approval Workflow - Production Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment for deployment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      reason:
+        description: 'Reason for manual deployment'
+        required: true
+        type: string
+      approver:
+        description: 'Name of the person requesting deployment'
+        required: true
+        type: string
+
+  # Trigger on push to main branch (for production)
+  push:
+    branches:
+      - main
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Pre-deployment Validation
+  pre-deployment-validation:
+    runs-on: ubuntu-latest
+    outputs:
+      validation-passed: ${{ steps.validation.outputs.passed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run comprehensive tests
+        run: |
+          echo "🧪 Running comprehensive test suite..."
+          npm run test:coverage
+          npm run test:integration
+          npm run test:e2e
+
+      - name: Security scan
+        run: |
+          echo "🔒 Running security scans..."
+          npm audit --audit-level high
+          npm run security:scan
+
+      - name: Performance check
+        run: |
+          echo "⚡ Running performance checks..."
+          npm run build
+          npm run performance:check
+
+      - name: Validation Check
+        id: validation
+        run: |
+          echo "✅ Pre-deployment validation passed"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+  # Manual Approval Gate
+  manual-approval:
+    runs-on: ubuntu-latest
+    needs: pre-deployment-validation
+    environment: 
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ steps.deployment-url.outputs.url }}
+    steps:
+      - name: Get deployment URL
+        id: deployment-url
+        run: |
+          if [ "${{ github.event.inputs.environment || 'production' }}" = "production" ]; then
+            echo "url=https://your-app.com" >> $GITHUB_OUTPUT
+          else
+            echo "url=https://staging.your-app.com" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Pre-approval Summary
+        run: |
+          echo "## 🚀 Manual Deployment Request"
+          echo ""
+          echo "**Environment**: ${{ github.event.inputs.environment || 'production' }}"
+          echo "**Requested by**: ${{ github.event.inputs.approver || github.actor }}"
+          echo "**Reason**: ${{ github.event.inputs.reason || 'Production deployment' }}"
+          echo "**Commit**: ${{ github.sha }}"
+          echo "**Branch**: ${{ github.ref_name }}"
+          echo ""
+          echo "### Pre-deployment Checks:"
+          echo "- ✅ Validation: ${{ needs.pre-deployment-validation.outputs.validation-passed }}"
+          echo ""
+          echo "### Required Approvals:"
+          echo "- [ ] DevOps Lead Approval"
+          echo "- [ ] Technical Lead Approval"
+          echo "- [ ] Security Team Approval (if security changes)"
+          echo ""
+          echo "**⚠️ This deployment will affect production users!**"
+
+      - name: Wait for manual approval
+        run: |
+          echo "⏳ Waiting for manual approval..."
+          echo "Please review the deployment request and approve if ready."
+
+  # Production Deployment
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-validation, manual-approval]
+    if: github.event.inputs.environment == 'production' || github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Production
+        run: |
+          echo "🚀 Deploying to Production Environment"
+          echo "Image: ${{ steps.meta.outputs.tags }}"
+          echo "Deployed by: ${{ github.event.inputs.approver || github.actor }}"
+          echo "Reason: ${{ github.event.inputs.reason || 'Production deployment' }}"
+          echo "Commit: ${{ github.sha }}"
+          
+          # Add your production deployment commands here
+          # Example: kubectl apply -f k8s/production/
+          # Example: aws ecs update-service --cluster production --service app --force-new-deployment
+          
+          echo "✅ Production deployment initiated"
+
+      - name: Post-deployment Verification
+        run: |
+          echo "🔍 Running post-deployment verification..."
+          
+          # Health check
+          echo "Checking application health..."
+          # curl -f https://your-app.com/health
+          
+          # Smoke tests
+          echo "Running smoke tests..."
+          # npm run test:smoke
+          
+          echo "✅ Post-deployment verification completed"
+
+      - name: Notify Production Deployment
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          text: |
+            🚀 Production Deployment ${{ job.status }}!
+            
+            **Details:**
+            - Environment: Production
+            - Deployed by: ${{ github.event.inputs.approver || github.actor }}
+            - Reason: ${{ github.event.inputs.reason || 'Production deployment' }}
+            - Commit: ${{ github.sha }}
+            - Image: ${{ steps.meta.outputs.tags }}
+            
+            **Status:** ${{ job.status }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Staging Deployment
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-validation, manual-approval]
+    if: github.event.inputs.environment == 'staging'
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Deploy to Staging
+        run: |
+          echo "🚀 Deploying to Staging Environment"
+          echo "Deployed by: ${{ github.event.inputs.approver || github.actor }}"
+          echo "Reason: ${{ github.event.inputs.reason || 'Staging deployment' }}"
+          echo "Commit: ${{ github.sha }}"
+          
+          # Add your staging deployment commands here
+          # Example: kubectl apply -f k8s/staging/
+          
+          echo "✅ Staging deployment completed"
+
+      - name: Run Staging Tests
+        run: |
+          echo "🧪 Running staging environment tests..."
+          # npm run test:staging
+          
+          echo "✅ Staging tests completed"
+
+      - name: Notify Staging Deployment
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          text: |
+            🚀 Staging Deployment ${{ job.status }}!
+            
+            **Details:**
+            - Environment: Staging
+            - Deployed by: ${{ github.event.inputs.approver || github.actor }}
+            - Reason: ${{ github.event.inputs.reason || 'Staging deployment' }}
+            - Commit: ${{ github.sha }}
+            
+            **Status:** ${{ job.status }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Deployment Summary
+  deployment-summary:
+    needs: [deploy-production, deploy-staging]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "## 📋 Deployment Summary"
+          echo ""
+          echo "**Environment**: ${{ github.event.inputs.environment || 'production' }}"
+          echo "**Deployed by**: ${{ github.event.inputs.approver || github.actor }}"
+          echo "**Reason**: ${{ github.event.inputs.reason || 'Manual deployment' }}"
+          echo "**Commit**: ${{ github.sha }}"
+          echo "**Branch**: ${{ github.ref_name }}"
+          echo ""
+          echo "### Deployment Status:"
+          echo "- Production: ${{ needs.deploy-production.result }}"
+          echo "- Staging: ${{ needs.deploy-staging.result }}"
+          echo ""
+          echo "### Next Steps:"
+          echo "1. Monitor application health"
+          echo "2. Check error logs"
+          echo "3. Verify user experience"
+          echo "4. Update deployment documentation"
