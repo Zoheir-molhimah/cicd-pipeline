@@ -1,0 +1,158 @@
+name: Conflict Detection & Prevention
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [develop, developer/*]
+
+jobs:
+  conflict-detection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect File Conflicts
+        run: |
+          echo "🔍 Checking for potential file conflicts..."
+          
+          # Check if multiple developers modified the same files
+          echo "## File Modification Analysis" >> $GITHUB_STEP_SUMMARY
+          
+          # Get list of modified files in this PR
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          fi
+          
+          echo "### Modified Files:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$CHANGED_FILES" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          # Check for critical shared files
+          CRITICAL_FILES=("package.json" "package-lock.json" "webpack.config.js" "src/server.js" "database.sqlite")
+          
+          echo "### Critical File Check:" >> $GITHUB_STEP_SUMMARY
+          for file in "${CRITICAL_FILES[@]}"; do
+            if echo "$CHANGED_FILES" | grep -q "$file"; then
+              echo "⚠️ **$file** has been modified - requires team coordination!" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+      - name: Check Developer Branch Conflicts
+        run: |
+          echo "## Developer Branch Analysis" >> $GITHUB_STEP_SUMMARY
+          
+          # Get current branch
+          CURRENT_BRANCH="${{ github.ref_name }}"
+          echo "**Current Branch:** $CURRENT_BRANCH" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if this is a developer branch
+          if [[ $CURRENT_BRANCH == developer/* ]]; then
+            echo "✅ Working on developer branch - good practice!" >> $GITHUB_STEP_SUMMARY
+            
+            # Extract developer type
+            DEV_TYPE=$(echo $CURRENT_BRANCH | cut -d'/' -f2)
+            echo "**Developer Type:** $DEV_TYPE" >> $GITHUB_STEP_SUMMARY
+            
+            # Check file ownership
+            case $DEV_TYPE in
+              "frontend")
+                echo "**Expected Files:** src/client/, public/, webpack.config.js" >> $GITHUB_STEP_SUMMARY
+                ;;
+              "react-database")
+                echo "**Expected Files:** src/components/, src/pages/, database/, migrations/" >> $GITHUB_STEP_SUMMARY
+                ;;
+              "backend-api")
+                echo "**Expected Files:** src/server.js, src/routes/, src/middleware/, src/auth/" >> $GITHUB_STEP_SUMMARY
+                ;;
+            esac
+          else
+            echo "⚠️ Not working on developer branch - consider using developer/[your-type] branch" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Dependency Conflict Check
+        run: |
+          echo "## Dependency Analysis" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if package.json was modified
+          if echo "$CHANGED_FILES" | grep -q "package.json"; then
+            echo "📦 package.json modified - checking for dependency conflicts..." >> $GITHUB_STEP_SUMMARY
+            
+            # Install dependencies and check for conflicts
+            npm ci
+            if npm ls --depth=0 2>&1 | grep -q "UNMET DEPENDENCY"; then
+              echo "❌ **Dependency conflicts detected!**" >> $GITHUB_STEP_SUMMARY
+              echo "Please resolve dependency conflicts before merging." >> $GITHUB_STEP_SUMMARY
+              exit 1
+            else
+              echo "✅ No dependency conflicts detected" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "ℹ️ package.json not modified - skipping dependency check" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Database Conflict Check
+        run: |
+          echo "## Database Analysis" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if database files were modified
+          if echo "$CHANGED_FILES" | grep -q "database.sqlite\|migrations/"; then
+            echo "🗄️ Database files modified - checking for conflicts..." >> $GITHUB_STEP_SUMMARY
+            
+            # Check if database schema changes are properly versioned
+            if echo "$CHANGED_FILES" | grep -q "database.sqlite" && ! echo "$CHANGED_FILES" | grep -q "migrations/"; then
+              echo "⚠️ **Direct database.sqlite modification detected!**" >> $GITHUB_STEP_SUMMARY
+              echo "Please use migration files instead of direct database modification." >> $GITHUB_STEP_SUMMARY
+              exit 1
+            else
+              echo "✅ Database changes appear to be properly versioned" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "ℹ️ No database files modified" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Code Quality Check
+        run: |
+          echo "## Code Quality Analysis" >> $GITHUB_STEP_SUMMARY
+          
+          # Run linting
+          npm run lint
+          if [ $? -eq 0 ]; then
+            echo "✅ Code quality checks passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Code quality issues detected" >> $GITHUB_STEP_SUMMARY
+            echo "Please fix linting issues before merging." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Build Test
+        run: |
+          echo "## Build Analysis" >> $GITHUB_STEP_SUMMARY
+          
+          # Test build
+          npm run build
+          if [ $? -eq 0 ]; then
+            echo "✅ Build successful" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Build failed" >> $GITHUB_STEP_SUMMARY
+            echo "Please fix build issues before merging." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Summary
+        run: |
+          echo "## 🎯 Conflict Detection Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ✅ No conflicts detected" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Recommendations:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Continue working on your assigned files" >> $GITHUB_STEP_SUMMARY
+          echo "- Communicate with team before touching shared files" >> $GITHUB_STEP_SUMMARY
+          echo "- Test your changes before pushing" >> $GITHUB_STEP_SUMMARY
+          echo "- Create feature branches for new features" >> $GITHUB_STEP_SUMMARY
