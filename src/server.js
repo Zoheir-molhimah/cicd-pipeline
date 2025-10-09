@@ -1,4 +1,5 @@
 const express = require('express');
+// Staging environment - testing CI/CD pipeline
 const cors = require('cors');
 const helmet = require('helmet');
 const http = require('http');
