@@ -3,11 +3,252 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CICD Pipeline - Multi-Developer Website</title>
-    <link rel="stylesheet" href="styles/main.css">
+    <title>CICD Pipeline - Frontend</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .header {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+        
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #28a745;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+        
+        .feature:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .feature h3 {
+            color: #333;
+            margin: 10px 0;
+        }
+        
+        .feature p {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .developer-info {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .developer-info h3 {
+            color: #1976d2;
+            margin-top: 0;
+        }
+    </style>
 </head>
 <body>
-    <div id="root"></div>
-    <script src="bundle.js"></script>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 CICD Pipeline</h1>
+            <p>Frontend Developer Dashboard</p>
+        </div>
+        
+        <div class="status-card">
+            <span class="status-indicator"></span>
+            <strong>System Status:</strong> All systems operational
+        </div>
+        
+        <div class="developer-info">
+            <h3>👨‍💻 Frontend Developer</h3>
+            <p>Working on: UI/UX improvements, client-side functionality, and user interface components</p>
+            <p><strong>Branch:</strong> developer/frontend</p>
+            <p><strong>Feature:</strong> frontend-ui-improvements</p>
+        </div>
+        
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">🎨</div>
+                <h3>UI Design</h3>
+                <p>Modern, responsive design with smooth animations and transitions</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">📱</div>
+                <h3>Responsive</h3>
+                <p>Mobile-first approach ensuring great experience on all devices</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <h3>Performance</h3>
+                <p>Optimized loading times and smooth user interactions</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">🔧</div>
+                <h3>Maintainable</h3>
+                <p>Clean, organized code structure for easy maintenance</p>
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <button class="btn" onclick="showAlert()">Test Frontend</button>
+            <button class="btn" onclick="toggleTheme()">Toggle Theme</button>
+        </div>
+        
+        <div id="test-result" style="margin-top: 20px; padding: 15px; background: #f0f8ff; border-radius: 10px; display: none;">
+            <h3>✅ Frontend Test Results</h3>
+            <p>JavaScript is working correctly!</p>
+            <p>DOM manipulation successful!</p>
+            <p>Event handling functional!</p>
+        </div>
+    </div>
+
+    <script>
+        // Frontend Developer - JavaScript functionality
+        function showAlert() {
+            const resultDiv = document.getElementById('test-result');
+            resultDiv.style.display = 'block';
+            
+            // Add some animation
+            resultDiv.style.opacity = '0';
+            resultDiv.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                resultDiv.style.transition = 'all 0.5s ease';
+                resultDiv.style.opacity = '1';
+                resultDiv.style.transform = 'translateY(0)';
+            }, 100);
+        }
+        
+        function toggleTheme() {
+            const body = document.body;
+            const container = document.querySelector('.container');
+            
+            if (body.style.background.includes('dark')) {
+                body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                container.style.background = 'white';
+                container.style.color = '#333';
+            } else {
+                body.style.background = 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)';
+                container.style.background = '#2c3e50';
+                container.style.color = '#ecf0f1';
+            }
+        }
+        
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            const features = document.querySelectorAll('.feature');
+            
+            features.forEach((feature, index) => {
+                feature.style.animationDelay = `${index * 0.1}s`;
+                feature.style.animation = 'fadeInUp 0.6s ease forwards';
+            });
+        });
+        
+        // CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
 </body>
 </html>
